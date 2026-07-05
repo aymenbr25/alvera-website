@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>لوحة التحكم — CALMORA</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          primary: 'oklch(0.72 0.11 15)',
+          'primary-foreground': 'oklch(0.99 0 0)',
+          blush: 'oklch(0.92 0.04 15)',
+          cream: 'oklch(0.98 0.015 60)',
+        }
+      }
+    }
+  };
+</script>
+<style>
+  body { font-family: 'Tajawal', system-ui, sans-serif; }
+  .status-badge { display:inline-flex; align-items:center; gap:.35rem; padding:.3rem .7rem; border-radius:9999px; font-size:.72rem; font-weight:700; }
+  .status-جديد { background:#FFF3CD; color:#8a6d00; }
+  .status-تم\.الاتصال { background:#D9EAF7; color:#1d5a8a; }
+  .status-قيد\.التوصيل { background:#FFE5B4; color:#9a5a00; }
+  .status-تم\.التسليم { background:#D8F3DC; color:#1c7a3a; }
+  .status-ملغي { background:#F8D7DA; color:#a02030; }
+  select.status-select { font-size:.75rem; font-weight:700; border-radius:9999px; padding:.35rem .6rem; border:1.5px solid oklch(0.92 0.02 20); background:#fff; }
+  .skeleton { background: linear-gradient(90deg,#eee 25%,#f5f5f5 37%,#eee 63%); background-size:400% 100%; animation: sk 1.4s ease infinite; }
+  @keyframes sk { 0%{background-position:100% 50%} 100%{background-position:0 50%} }
+</style>
+</head>
+<body class="bg-cream min-h-screen text-gray-800">
+
+<!-- ============= شاشة الدخول بالمفتاح ============= -->
+<div id="gate" class="fixed inset-0 z-50 bg-cream flex items-center justify-center px-5">
+  <div class="bg-white rounded-3xl shadow-lg border border-gray-100 p-8 max-w-sm w-full text-center">
+    <div class="font-bold text-2xl text-primary mb-1">CALMORA</div>
+    <p class="text-sm text-gray-500 mb-6">لوحة التحكم</p>
+    <input id="gate-key" type="password" placeholder="مفتاح الدخول (API key)" class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm mb-3 focus:outline-none focus:border-primary">
+    <button onclick="submitKey()" class="w-full bg-primary text-white font-bold rounded-xl py-3 text-sm hover:opacity-90 transition">دخول</button>
+    <p id="gate-error" class="text-xs text-red-500 mt-3 hidden">المفتاح غلط، عاودي المحاولة</p>
+  </div>
+</div>
+
+<!-- ============= الداشبورد ============= -->
+<div id="app" class="hidden">
+
+  <header class="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-gray-100">
+    <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="font-extrabold text-xl text-primary">CALMORA</span>
+        <span class="text-xs text-gray-400 font-medium">لوحة التحكم</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span id="last-updated" class="text-xs text-gray-400 hidden sm:inline"></span>
+        <button onclick="loadOrders()" class="flex items-center gap-1.5 text-sm font-semibold text-primary border border-primary/30 rounded-full px-3.5 py-2 hover:bg-primary/5 transition">
+          <svg id="refresh-icon" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 4v5h-5"/></svg>
+          تحديث
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+
+    <!-- STAT CARDS -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3" id="stat-cards"></div>
+
+    <!-- CHARTS -->
+    <div class="grid md:grid-cols-3 gap-4">
+      <div class="md:col-span-2 bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+        <h3 class="font-bold text-sm mb-3">الطلبيات آخر 14 يوم</h3>
+        <canvas id="ordersChart" height="140"></canvas>
+      </div>
+      <div class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+        <h3 class="font-bold text-sm mb-3">الطلبيات حسب الحالة</h3>
+        <canvas id="statusChart" height="140"></canvas>
+      </div>
+    </div>
+
+    <!-- TOP WILAYAS -->
+    <div class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+      <h3 class="font-bold text-sm mb-3">أكثر الولايات طلباً</h3>
+      <div id="top-wilayas" class="flex flex-wrap gap-2"></div>
+    </div>
+
+    <!-- FILTERS -->
+    <div class="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm flex flex-col md:flex-row gap-3">
+      <input id="search-input" oninput="renderTable()" placeholder="بحث بالاسم أو الهاتف..." class="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary">
+      <select id="status-filter" onchange="renderTable()" class="border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary">
+        <option value="">كل الحالات</option>
+        <option value="جديد">جديد</option>
+        <option value="تم الاتصال">تم الاتصال</option>
+        <option value="قيد التوصيل">قيد التوصيل</option>
+        <option value="تم التسليم">تم التسليم</option>
+        <option value="ملغي">ملغي</option>
+      </select>
+      <select id="period-filter" onchange="renderTable()" class="border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary">
+        <option value="all">كل الفترات</option>
+        <option value="today">اليوم</option>
+        <option value="week">هذا الأسبوع</option>
+        <option value="month">هذا الشهر</option>
+      </select>
+    </div>
+
+    <!-- ORDERS TABLE -->
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 text-gray-500 text-xs">
+            <tr>
+              <th class="text-right py-3 px-4 font-semibold">رقم</th>
+              <th class="text-right py-3 px-4 font-semibold">التاريخ</th>
+              <th class="text-right py-3 px-4 font-semibold">الاسم</th>
+              <th class="text-right py-3 px-4 font-semibold">الهاتف</th>
+              <th class="text-right py-3 px-4 font-semibold">الولاية</th>
+              <th class="text-right py-3 px-4 font-semibold">الكمية</th>
+              <th class="text-right py-3 px-4 font-semibold">المجموع</th>
+              <th class="text-right py-3 px-4 font-semibold">الحالة</th>
+            </tr>
+          </thead>
+          <tbody id="orders-tbody"></tbody>
+        </table>
+      </div>
+      <div id="empty-state" class="hidden text-center py-14 text-gray-400 text-sm">لا توجد طلبيات مطابقة</div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+/* ============================================================
+   ⚙️ إعدادات — عدّلي هذين السطرين فقط
+   ============================================================ */
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyNx5tufcqE7AO8uxKlSFYAySci9mbEbxBnEwg0RPsgD0az8NPzMhWof28rqXVm8e9k3g/exec";
+// نفس القيمة اللي حطيتيها فـ API_KEY فالـ Apps Script
+const EXPECTED_KEY_HINT_LENGTH = null; // (مش مهم، تجاهليه)
+/* ============================================================ */
+
+let API_KEY = "";
+let allOrders = [];
+let ordersChart, statusChart;
+
+const STATUS_LIST = ["جديد", "تم الاتصال", "قيد التوصيل", "تم التسليم", "ملغي"];
+const STATUS_COLORS = { "جديد":"#e8c200", "تم الاتصال":"#3f8fd1", "قيد التوصيل":"#e0912a", "تم التسليم":"#2fa84f", "ملغي":"#d9455a" };
+
+function submitKey(){
+  const key = document.getElementById('gate-key').value.trim();
+  if (!key) return;
+  API_KEY = key;
+  localStorage.setItem('calmora_admin_key', key);
+  document.getElementById('gate-error').classList.add('hidden');
+  loadOrders(true);
+}
+
+async function loadOrders(fromGate){
+  const icon = document.getElementById('refresh-icon');
+  icon.classList.add('animate-spin');
+  try {
+    const url = `${APPS_SCRIPT_URL}?action=list&key=${encodeURIComponent(API_KEY)}`;
+    const res = await fetch(url);
+    const json = await res.json();
+
+    if (!json.success) {
+      if (fromGate) {
+        document.getElementById('gate-error').classList.remove('hidden');
+      }
+      icon.classList.remove('animate-spin');
+      return;
+    }
+
+    allOrders = json.orders || [];
+    document.getElementById('gate').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    document.getElementById('last-updated').textContent = 'آخر تحديث: ' + new Date().toLocaleTimeString('ar-DZ');
+
+    renderStats();
+    renderCharts();
+    renderTopWilayas();
+    renderTable();
+  } catch(err){
+    console.error(err);
+    if (fromGate) document.getElementById('gate-error').classList.remove('hidden');
+  }
+  icon.classList.remove('animate-spin');
+}
+
+/* -------------------- helpers -------------------- */
+function isToday(d){ const n=new Date(); return d.getFullYear()===n.getFullYear() && d.getMonth()===n.getMonth() && d.getDate()===n.getDate(); }
+function isThisWeek(d){ const n=new Date(); const start=new Date(n); start.setDate(n.getDate()-n.getDay()); start.setHours(0,0,0,0); return d>=start; }
+function isThisMonth(d){ const n=new Date(); return d.getFullYear()===n.getFullYear() && d.getMonth()===n.getMonth(); }
+
+/* -------------------- stats -------------------- */
+function renderStats(){
+  const validOrders = allOrders.filter(o => o.status !== "ملغي");
+  const total = allOrders.length;
+  const revenue = validOrders.reduce((s,o)=>s+Number(o.totalAmount||0),0);
+  const todayCount = allOrders.filter(o=>isToday(new Date(o.date))).length;
+  const pendingCount = allOrders.filter(o=>o.status==="جديد").length;
+
+  const cards = [
+    { label:"عدد الطلبيات الكلي", value: total, color:"text-gray-800" },
+    { label:"المبيعات (بدون ملغاة)", value: revenue.toLocaleString('en-US') + " دج", color:"text-primary" },
+    { label:"طلبيات اليوم", value: todayCount, color:"text-blue-600" },
+    { label:"بانتظار الاتصال", value: pendingCount, color:"text-amber-600" },
+  ];
+
+  document.getElementById('stat-cards').innerHTML = cards.map(c => `
+    <div class="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+      <div class="text-xs text-gray-400 font-medium mb-1">${c.label}</div>
+      <div class="text-2xl font-extrabold ${c.color}">${c.value}</div>
+    </div>
+  `).join('');
+}
+
+/* -------------------- charts -------------------- */
+function renderCharts(){
+  // last 14 days
+  const days = [];
+  for(let i=13;i>=0;i--){
+    const d = new Date(); d.setDate(d.getDate()-i); d.setHours(0,0,0,0);
+    days.push(d);
+  }
+  const counts = days.map(d => allOrders.filter(o=>{
+    const od = new Date(o.date);
+    return od.getFullYear()===d.getFullYear() && od.getMonth()===d.getMonth() && od.getDate()===d.getDate();
+  }).length);
+  const labels = days.map(d => d.toLocaleDateString('ar-DZ',{day:'2-digit',month:'2-digit'}));
+
+  if (ordersChart) ordersChart.destroy();
+  ordersChart = new Chart(document.getElementById('ordersChart'), {
+    type:'bar',
+    data:{ labels, datasets:[{ data: counts, backgroundColor:'oklch(0.72 0.11 15)', borderRadius:6 }] },
+    options:{ plugins:{legend:{display:false}}, scales:{ y:{ beginAtZero:true, ticks:{ precision:0 } } } }
+  });
+
+  const statusCounts = STATUS_LIST.map(s => allOrders.filter(o=>o.status===s).length);
+  if (statusChart) statusChart.destroy();
+  statusChart = new Chart(document.getElementById('statusChart'), {
+    type:'doughnut',
+    data:{ labels: STATUS_LIST, datasets:[{ data: statusCounts, backgroundColor: STATUS_LIST.map(s=>STATUS_COLORS[s]) }] },
+    options:{ plugins:{ legend:{ position:'bottom', labels:{ boxWidth:10, font:{size:10} } } } }
+  });
+}
+
+/* -------------------- top wilayas -------------------- */
+function renderTopWilayas(){
+  const counts = {};
+  allOrders.forEach(o => { if(o.wilaya) counts[o.wilaya] = (counts[o.wilaya]||0)+1; });
+  const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  document.getElementById('top-wilayas').innerHTML = sorted.map(([w,c]) => `
+    <span class="text-xs font-semibold bg-blush/60 text-primary rounded-full px-3 py-1.5">${w} · ${c}</span>
+  `).join('') || '<span class="text-xs text-gray-400">لا توجد بيانات بعد</span>';
+}
+
+/* -------------------- table -------------------- */
+function renderTable(){
+  const search = document.getElementById('search-input').value.trim().toLowerCase();
+  const statusF = document.getElementById('status-filter').value;
+  const periodF = document.getElementById('period-filter').value;
+
+  let filtered = allOrders.filter(o => {
+    if (statusF && o.status !== statusF) return false;
+    if (search && !(String(o.name).toLowerCase().includes(search) || String(o.phone).includes(search))) return false;
+    if (periodF !== 'all'){
+      const d = new Date(o.date);
+      if (periodF==='today' && !isToday(d)) return false;
+      if (periodF==='week' && !isThisWeek(d)) return false;
+      if (periodF==='month' && !isThisMonth(d)) return false;
+    }
+    return true;
+  });
+
+  filtered = filtered.sort((a,b) => new Date(b.date) - new Date(a.date));
+
+  document.getElementById('empty-state').classList.toggle('hidden', filtered.length !== 0);
+
+  document.getElementById('orders-tbody').innerHTML = filtered.map(o => {
+    const d = new Date(o.date);
+    const dateStr = isNaN(d) ? o.date : d.toLocaleDateString('ar-DZ',{day:'2-digit',month:'2-digit',year:'numeric'}) + ' ' + d.toLocaleTimeString('ar-DZ',{hour:'2-digit',minute:'2-digit'});
+    return `<tr class="border-t border-gray-50 hover:bg-gray-50/60 transition">
+      <td class="py-3 px-4 text-xs text-gray-400 font-mono">${o.id}</td>
+      <td class="py-3 px-4 text-xs text-gray-500 whitespace-nowrap">${dateStr}</td>
+      <td class="py-3 px-4 font-semibold">${escapeHtml(o.name)}</td>
+      <td class="py-3 px-4"><a href="tel:${o.phone}" class="text-primary hover:underline">${o.phone}</a></td>
+      <td class="py-3 px-4 text-xs">${escapeHtml(o.wilaya)}</td>
+      <td class="py-3 px-4 text-center">${o.qty}</td>
+      <td class="py-3 px-4 font-bold whitespace-nowrap">${Number(o.totalAmount||0).toLocaleString('en-US')} دج</td>
+      <td class="py-3 px-4">
+        <select class="status-select" onchange="changeStatus('${o.id}', this.value, this)">
+          ${STATUS_LIST.map(s => `<option value="${s}" ${s===o.status?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function escapeHtml(str){
+  return String(str ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function changeStatus(id, newStatus, selectEl){
+  selectEl.disabled = true;
+  try{
+    const url = `${APPS_SCRIPT_URL}?action=updateStatus&key=${encodeURIComponent(API_KEY)}&id=${encodeURIComponent(id)}&status=${encodeURIComponent(newStatus)}`;
+    const res = await fetch(url);
+    const json = await res.json();
+    if (json.success){
+      const o = allOrders.find(x=>x.id===id);
+      if (o) o.status = newStatus;
+      renderStats();
+      renderCharts();
+    } else {
+      alert('ما قدرتش نبدل الحالة: ' + (json.error || ''));
+    }
+  } catch(err){
+    alert('خطأ فالاتصال، عاودي المحاولة');
+  }
+  selectEl.disabled = false;
+}
+
+/* -------------------- init -------------------- */
+const savedKey = localStorage.getItem('calmora_admin_key');
+if (savedKey){
+  API_KEY = savedKey;
+  document.getElementById('gate-key').value = savedKey;
+  loadOrders(true);
+}
+document.getElementById('gate-key').addEventListener('keydown', e => { if(e.key==='Enter') submitKey(); });
+
+// تحديث تلقائي كل 60 ثانية
+setInterval(() => { if (API_KEY) loadOrders(); }, 60000);
+</script>
+</body>
+</html>
