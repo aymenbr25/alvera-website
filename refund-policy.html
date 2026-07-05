@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>سياسة الإرجاع والاستبدال — CALMORA</title>
+<meta name="description" content="سياسة الإرجاع والاستبدال الخاصة بمتجر CALMORA">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=Cormorant+Garamond:wght@400;500;600;700&display=swap">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          background: 'oklch(0.995 0.005 30)',
+          foreground: 'oklch(0.28 0.03 20)',
+          primary: 'oklch(0.72 0.11 15)',
+          'primary-foreground': 'oklch(0.99 0 0)',
+          'muted-foreground': 'oklch(0.5 0.03 20)',
+          border: 'oklch(0.92 0.02 20)',
+          blush: 'oklch(0.92 0.04 15)',
+          cream: 'oklch(0.98 0.015 60)',
+        },
+        fontFamily: {
+          display: ['"Cormorant Garamond"', 'serif'],
+          body: ['"Tajawal"', 'system-ui', 'sans-serif'],
+        },
+      }
+    }
+  };
+</script>
+<style>
+  body { font-family: 'Tajawal', system-ui, sans-serif; }
+  .font-display { font-family: 'Cormorant Garamond', serif; }
+  h2 { font-weight: 800; }
+</style>
+</head>
+<body class="bg-background text-foreground min-h-screen">
+
+  <header class="sticky top-0 z-40 backdrop-blur-md bg-background/80 border-b border-border/60">
+    <div class="mx-auto max-w-4xl px-5 h-14 flex items-center justify-between">
+      <a href="./index.html" class="font-display text-2xl tracking-widest text-primary font-semibold">CALMORA</a>
+      <a href="./index.html" class="text-xs font-bold text-primary border border-primary/30 rounded-full px-4 py-2 hover:bg-primary/5 transition">الرئيسية</a>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-3xl px-5 py-14 md:py-20">
+    <h1 class="font-display text-3xl md:text-4xl mb-2 text-balance">سياسة الإرجاع والاستبدال</h1>
+    <p class="text-sm text-muted-foreground mb-10">آخر تحديث: يوليو 2026</p>
+
+    <div class="space-y-8 leading-relaxed text-[15px]">
+
+      <section>
+        <h2 class="text-xl mb-2">إمكانية الإرجاع</h2>
+        <p>نظرا لطبيعة المنتج (منتج عناية شخصية للاستعمال الخارجي)، لا يمكن استرجاعه لأسباب صحية ووقائية إذا تم فتح التغليف أو استعمال المنتج، وذلك حفاظا على سلامة كل الزبائن.</p>
+      </section>
+      <section>
+        <h2 class="text-xl mb-2">حالات الاستبدال المقبولة</h2>
+        <p>نقبل الاستبدال أو الاسترجاع فالحالات التالية فقط:</p>
+        <ul class="list-disc pr-6 mt-2 space-y-1">
+          <li>وصول المنتج بحالة تالفة أو معطوبة بسبب النقل</li>
+          <li>وصول منتج مختلف عن اللي تم طلبه</li>
+          <li>وجود عيب واضح فالمنتج قبل فتح الاستعمال</li>
+        </ul>
+      </section>
+      <section>
+        <h2 class="text-xl mb-2">رفض الاستلام</h2>
+        <p>يحق لك رفض استلام الطلب من عون التوصيل مباشرة إذا لاحظتي أن التغليف تالف أو المنتج غير مطابق، بدون أي التزام بالدفع.</p>
+      </section>
+      <section>
+        <h2 class="text-xl mb-2">كيفاش تطلبي استبدال</h2>
+        <p>تواصلي معنا عبر واتساب أو الهاتف خلال 48 ساعة من استلام الطلب، مع توضيح المشكل (ويفضل إرفاق صورة)، وسنتكفل بدراسة الحالة والرد عليك فأقرب وقت.</p>
+      </section>
+      <section>
+        <h2 class="text-xl mb-2">استرجاع المبلغ</h2>
+        <p>فحالة قبول الاسترجاع، يتم الاتفاق معك على طريقة استرداد المبلغ (استبدال بمنتج جديد أو استرجاع المبلغ حسب الحالة).</p>
+      </section>
+
+    </div>
+
+    <div class="mt-14 bg-cream border border-border rounded-2xl p-5 text-sm text-muted-foreground">
+      عندك سؤال؟ تواصلي معنا عبر الهاتف <span class="font-semibold text-foreground">+213542968236</span> أو واتساب.
+    </div>
+  </main>
+
+  <footer class="bg-foreground text-background/90 py-8 px-5 text-center text-xs opacity-60">
+    © <span id="year"></span> CALMORA · جميع الحقوق محفوظة
+  </footer>
+
+  <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+</body>
+</html>
