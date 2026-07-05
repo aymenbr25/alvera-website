@@ -49,8 +49,16 @@
 </head>
 <body class="bg-cream min-h-screen text-gray-800">
 
+<!-- ============= شاشة تحميل أولية (تفادي الوميض) ============= -->
+<div id="boot-loader" class="fixed inset-0 z-[60] bg-cream flex items-center justify-center">
+  <div class="flex flex-col items-center gap-3">
+    <div class="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+    <span class="text-sm text-gray-400 font-medium">CALMORA</span>
+  </div>
+</div>
+
 <!-- ============= شاشة الدخول بالمفتاح ============= -->
-<div id="gate" class="fixed inset-0 z-50 bg-cream flex items-center justify-center px-5">
+<div id="gate" class="hidden fixed inset-0 z-50 bg-cream flex items-center justify-center px-5">
   <div class="bg-white rounded-3xl shadow-lg border border-gray-100 p-8 max-w-sm w-full text-center">
     <div class="font-bold text-2xl text-primary mb-1">CALMORA</div>
     <p class="text-sm text-gray-500 mb-6">لوحة التحكم</p>
@@ -173,21 +181,25 @@ function submitKey(){
 
 async function loadOrders(fromGate){
   const icon = document.getElementById('refresh-icon');
-  icon.classList.add('animate-spin');
+  if (icon) icon.classList.add('animate-spin');
   try {
     const url = `${APPS_SCRIPT_URL}?action=list&key=${encodeURIComponent(API_KEY)}`;
     const res = await fetch(url);
     const json = await res.json();
 
     if (!json.success) {
+      document.getElementById('boot-loader').classList.add('hidden');
+      document.getElementById('app').classList.add('hidden');
+      document.getElementById('gate').classList.remove('hidden');
       if (fromGate) {
         document.getElementById('gate-error').classList.remove('hidden');
       }
-      icon.classList.remove('animate-spin');
+      if (icon) icon.classList.remove('animate-spin');
       return;
     }
 
     allOrders = json.orders || [];
+    document.getElementById('boot-loader').classList.add('hidden');
     document.getElementById('gate').classList.add('hidden');
     document.getElementById('app').classList.remove('hidden');
     document.getElementById('last-updated').textContent = 'آخر تحديث: ' + new Date().toLocaleTimeString('ar-DZ');
@@ -198,7 +210,12 @@ async function loadOrders(fromGate){
     renderTable();
   } catch(err){
     console.error(err);
-    if (fromGate) document.getElementById('gate-error').classList.remove('hidden');
+    document.getElementById('boot-loader').classList.add('hidden');
+    if (fromGate) {
+      document.getElementById('app').classList.add('hidden');
+      document.getElementById('gate').classList.remove('hidden');
+      document.getElementById('gate-error').classList.remove('hidden');
+    }
   }
   icon.classList.remove('animate-spin');
 }
@@ -343,11 +360,14 @@ if (savedKey){
   API_KEY = savedKey;
   document.getElementById('gate-key').value = savedKey;
   loadOrders(true);
+} else {
+  document.getElementById('boot-loader').classList.add('hidden');
+  document.getElementById('gate').classList.remove('hidden');
 }
 document.getElementById('gate-key').addEventListener('keydown', e => { if(e.key==='Enter') submitKey(); });
 
-// تحديث تلقائي كل 60 ثانية
-setInterval(() => { if (API_KEY) loadOrders(); }, 60000);
+// تحديث تلقائي كل 20 ثانية
+setInterval(() => { if (API_KEY) loadOrders(); }, 20000);
 
 // تفعيل PWA (يخلي الصفحة تتثبت فالهاتف كتطبيق)
 if ('serviceWorker' in navigator) {
