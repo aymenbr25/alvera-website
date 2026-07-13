@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-5Q7Q6P55');</script>
+<!-- End Google Tag Manager -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
 <title>CALMORA — راحة أكثر، أيام أخف | كريم عناية نسائية</title>
@@ -66,6 +73,10 @@
 </style>
 </head>
 <body class="min-h-screen bg-background text-foreground overflow-x-hidden">
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5Q7Q6P55"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
 
 <!-- META PIXEL noscript fallback - CALMORA -->
 <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=1321791370077333&ev=PageView&noscript=1" alt=""></noscript>
@@ -419,24 +430,166 @@
 
 <script>
 /* ============================================================
-   META PIXEL - CALMORA (Pixel ID: 1321791370077333)
+   TRACKING - CALMORA
+   Meta Pixel (1321791370077333) is now fired entirely from
+   Google Tag Manager (GTM-5Q7Q6P55). This page only pushes
+   events into dataLayer; GTM listens for these events and
+   fires the Facebook Pixel tags. Do NOT add fbq() calls here.
    ============================================================ */
-!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
-fbq('init','1321791370077333');
-fbq('track','PageView');
+window.dataLayer = window.dataLayer || [];
 
-function fbqSafe(...args){ if (typeof window.fbq === 'function') window.fbq(...args); }
-function getPackageData(qty){ let value = 1790; if (qty===2) value=3200; if (qty===3) value=4500; return {qty, value}; }
-function trackViewContent(value=1790){ fbqSafe('track','ViewContent',{content_name:'CALMORA',content_type:'product',content_ids:['CALMORA-001'],currency:'DZD',value}); }
+const CAPI_ENDPOINT = 'https://calmora-capi.barrahalaymen25.workers.dev/';
+
+function getPackageData(qty){
+  let value = 1890;
+  if (qty === 2) value = 3500;
+  if (qty === 3) value = 5000;
+  return { qty, value };
+}
+
+function createEventId(prefix){
+  const uuid = (window.crypto && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  return `${prefix}_${uuid}`;
+}
+
+function getCookie(name){
+  const row = document.cookie
+    .split('; ')
+    .find(item => item.startsWith(`${name}=`));
+  return row ? decodeURIComponent(row.split('=').slice(1).join('=')) : '';
+}
+
+function getFbc(){
+  const existing = getCookie('_fbc');
+  if (existing) return existing;
+  const fbclid = new URLSearchParams(window.location.search).get('fbclid');
+  return fbclid ? `fb.1.${Date.now()}.${fbclid}` : '';
+}
+
+function splitFullName(fullName){
+  const parts = String(fullName || '').trim().split(/\s+/).filter(Boolean);
+  return {
+    first_name: parts[0] || '',
+    last_name: parts.slice(1).join(' ') || '',
+  };
+}
+
+async function sendCapiEvent({
+  eventName,
+  eventId,
+  value,
+  qty,
+  orderId,
+  name,
+  phone,
+  city,
+  stateName,
+}){
+  const person = splitFullName(name);
+  const payload = {
+    event_name: eventName,
+    event_id: eventId,
+    event_time: Math.floor(Date.now() / 1000),
+    event_source_url: window.location.href,
+    user_data: {
+      phone: phone || '',
+      first_name: person.first_name,
+      last_name: person.last_name,
+      city: city || '',
+      state: stateName || '',
+      external_id: orderId || '',
+      fbp: getCookie('_fbp'),
+      fbc: getFbc(),
+      client_user_agent: navigator.userAgent,
+    },
+    custom_data: {
+      currency: 'DZD',
+      value: Number(value) || undefined,
+      content_name: 'CALMORA',
+      content_type: 'product',
+      content_ids: ['CALMORA-001'],
+      contents: qty ? [{ id: 'CALMORA-001', quantity: Number(qty), item_price: Number(value) / Number(qty) }] : undefined,
+      num_items: qty ? Number(qty) : undefined,
+      order_id: orderId || undefined,
+    },
+  };
+
+  const response = await fetch(CAPI_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    keepalive: true,
+  });
+
+  if (!response.ok){
+    throw new Error(`CAPI request failed: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+function pushBrowserEvent(event, eventId, extra = {}){
+  dataLayer.push({
+    event,
+    event_id: eventId,
+    eventID: eventId,
+    content_name: 'CALMORA',
+    content_type: 'product',
+    content_ids: ['CALMORA-001'],
+    currency: 'DZD',
+    ...extra,
+  });
+}
+
+function trackViewContent(value = 1890){
+  const eventId = createEventId('vc');
+  pushBrowserEvent('calmora_view_content', eventId, { value });
+  sendCapiEvent({ eventName: 'ViewContent', eventId, value, qty: 1 })
+    .catch(err => console.warn('ViewContent CAPI failed', err));
+}
+
 function trackInitiateCheckout(qty, value){
   if (sessionStorage.getItem('calmora_checkout_tracked') === 'true') return;
   const pkg = getPackageData(qty);
-  fbqSafe('track','InitiateCheckout',{content_name:'CALMORA',content_type:'product',content_ids:['CALMORA-001'],num_items:qty,currency:'DZD',value: value ?? pkg.value});
-  sessionStorage.setItem('calmora_checkout_tracked','true');
+  const finalValue = value ?? pkg.value;
+  const eventId = createEventId('ic');
+
+  pushBrowserEvent('calmora_initiate_checkout', eventId, {
+    num_items: qty,
+    value: finalValue,
+  });
+
+  sendCapiEvent({ eventName: 'InitiateCheckout', eventId, value: finalValue, qty })
+    .catch(err => console.warn('InitiateCheckout CAPI failed', err));
+
+  sessionStorage.setItem('calmora_checkout_tracked', 'true');
 }
-function trackPurchase(qty, value){
+
+function trackPurchase(qty, value, customer = {}){
   const pkg = getPackageData(qty);
-  fbqSafe('track','Purchase',{content_name:'CALMORA',content_type:'product',content_ids:['CALMORA-001'],num_items:qty,currency:'DZD',value: value ?? pkg.value});
+  const finalValue = value ?? pkg.value;
+  const orderId = customer.orderId || createEventId('order');
+  const eventId = orderId;
+
+  pushBrowserEvent('calmora_purchase', eventId, {
+    num_items: qty,
+    value: finalValue,
+    order_id: orderId,
+  });
+
+  return sendCapiEvent({
+    eventName: 'Purchase',
+    eventId,
+    value: finalValue,
+    qty,
+    orderId,
+    name: customer.name,
+    phone: customer.phone,
+    city: customer.city,
+    stateName: customer.stateName,
+  });
 }
 
 /* ============================================================
@@ -706,7 +859,9 @@ document.getElementById('order-form').addEventListener('submit', async (e)=>{
   const total = offer.price + fee;
   const deliveryLabel = DELIVERY_OPTIONS.find(d=>d.id===state.deliveryType).formValue;
 
+  const orderId = createEventId('order');
   const orderData = {
+    orderId,
     name: document.getElementById('f-name').value,
     phone: document.getElementById('f-phone').value,
     wilaya: state.wilaya,
@@ -725,7 +880,19 @@ document.getElementById('order-form').addEventListener('submit', async (e)=>{
       headers: {'Content-Type':'text/plain;charset=utf-8'},
       body: JSON.stringify(orderData),
     });
-    trackPurchase(offer.qty, total);
+
+    try{
+      await trackPurchase(offer.qty, total, {
+        orderId,
+        name: orderData.name,
+        phone: orderData.phone,
+        city: orderData.commune,
+        stateName: orderData.wilaya,
+      });
+    }catch(capiError){
+      console.warn('Purchase CAPI failed', capiError);
+    }
+
     showThankYouPage();
   }catch(err){
     console.error('Order submission failed', err);
