@@ -227,13 +227,22 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           </label>
           <label class="block">
             <span class="block text-sm font-semibold mb-1.5">البلدية <span class="text-primary">*</span></span>
-            <input required id="f-commune" class="input" placeholder="البلدية">
+            <select required id="f-commune" class="input" disabled>
+              <option value="">اختاري الولاية أولاً</option>
+            </select>
           </label>
         </div>
 
         <label class="block">
           <span class="block text-sm font-semibold mb-1.5">نوع التوصيل <span class="text-primary">*</span></span>
           <div class="grid grid-cols-2 gap-2" id="delivery-type-grid"></div>
+        </label>
+
+        <label class="block" id="office-field" hidden>
+          <span class="block text-sm font-semibold mb-1.5">مكتب التوصيل <span class="text-primary">*</span></span>
+          <select id="f-office" class="input" disabled>
+            <option value="">اختاري البلدية أولاً</option>
+          </select>
         </label>
 
         <label class="block">
@@ -434,6 +443,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 window.dataLayer = window.dataLayer || [];
 
 const CAPI_ENDPOINT = 'https://calmora-capi.barrahalaymen25.workers.dev/';
+const ZIMOU_ENDPOINT = CAPI_ENDPOINT.replace(/\/$/, '');
 
 function getPackageData(qty){
   let value = 1890;
@@ -612,16 +622,32 @@ const DELIVERY_OPTIONS = [
   { id:"home", label:"للمنزل", formValue:"للمنزل" },
 ];
 
-let state = { offerId: "1", deliveryType: "office", wilaya: "" };
+let state = {
+  offerId: "1",
+  deliveryType: "office",
+  wilaya: "",
+  wilayaId: "",
+  communeId: "",
+  homePrice: null,
+  offices: [],
+  selectedOffice: null,
+};
 
 function getDeliveryFee(wilaya, deliveryType){
-  const fees = DELIVERY_FEES[wilaya] || {};
+  const fallbackFees = DELIVERY_FEES[wilaya] || {};
+  const lowestOfficePrice = state.offices.length
+    ? Math.min(...state.offices.map(office=>office.price))
+    : null;
+  const fees = {
+    home: state.homePrice ?? fallbackFees.home ?? 0,
+    office: state.selectedOffice?.price ?? lowestOfficePrice ?? fallbackFees.office ?? 0,
+  };
+  const includedOfficeFee = lowestOfficePrice ?? fallbackFees.office ?? 0;
   if (state.offerId === "3"){
     if (deliveryType === "office") return 0;
     if (deliveryType === "home"){
       const homeFee = fees.home ?? 0;
-      const officeFee = fees.office ?? 0;
-      return Math.max(homeFee - officeFee, 0);
+      return Math.max(homeFee - includedOfficeFee, 0);
     }
   }
   return fees[deliveryType] ?? 0;
@@ -743,11 +769,99 @@ document.getElementById('thankyou-trust-grid').innerHTML = [
 
 /* wilaya select */
 const wilayaSelect = document.getElementById('f-wilaya');
-WILAYAS.forEach(w=>{
+const communeSelect = document.getElementById('f-commune');
+const officeSelect = document.getElementById('f-office');
+const officeField = document.getElementById('office-field');
+
+WILAYAS.forEach((w,index)=>{
   const opt = document.createElement('option');
-  opt.value = w; opt.textContent = w;
+  opt.value = w;
+  opt.textContent = w;
+  opt.dataset.zimouId = String(index + 1);
   wilayaSelect.appendChild(opt);
 });
+
+function resetZimouPricing(){
+  state.communeId = "";
+  state.homePrice = null;
+  state.offices = [];
+  state.selectedOffice = null;
+  officeSelect.innerHTML = '<option value="">اختاري البلدية أولاً</option>';
+  officeSelect.disabled = true;
+  renderOfficeField();
+}
+
+function renderOfficeField(){
+  const visible = state.deliveryType === "office";
+  officeField.hidden = !visible;
+  officeSelect.required = visible;
+}
+
+async function loadCommunes(){
+  resetZimouPricing();
+  communeSelect.disabled = true;
+  communeSelect.innerHTML = '<option value="">جاري تحميل البلديات...</option>';
+
+  try{
+    const response = await fetch(`${ZIMOU_ENDPOINT}/zimou/communes?wilaya_id=${encodeURIComponent(state.wilayaId)}`);
+    if (!response.ok) throw new Error(`Communes request failed: ${response.status}`);
+    const result = await response.json();
+    const communes = Array.isArray(result.data) ? result.data : [];
+    communeSelect.innerHTML = '<option value="">اختاري البلدية</option>' + communes.map(commune=>
+      `<option value="${commune.name}" data-commune-id="${commune.id}">${commune.name}</option>`
+    ).join('');
+    communeSelect.disabled = false;
+  }catch(error){
+    console.warn('ZIMOU communes unavailable', error);
+    communeSelect.innerHTML = '<option value="">تعذر تحميل البلديات — أعيدي المحاولة</option>';
+  }
+}
+
+async function loadPricing(){
+  state.homePrice = null;
+  state.offices = [];
+  state.selectedOffice = null;
+  officeSelect.disabled = true;
+  officeSelect.innerHTML = '<option value="">جاري تحميل المكاتب...</option>';
+  updateSummary();
+
+  try{
+    const [pricingResponse, officesResponse] = await Promise.all([
+      fetch(`${ZIMOU_ENDPOINT}/zimou/pricing?commune_id=${encodeURIComponent(state.communeId)}`),
+      fetch(`${ZIMOU_ENDPOINT}/zimou/offices?commune_id=${encodeURIComponent(state.communeId)}`),
+    ]);
+    if (!pricingResponse.ok) throw new Error(`Pricing request failed: ${pricingResponse.status}`);
+    if (!officesResponse.ok) throw new Error(`Offices request failed: ${officesResponse.status}`);
+    const [result, officesResult] = await Promise.all([
+      pricingResponse.json(),
+      officesResponse.json(),
+    ]);
+    const prices = Array.isArray(result.data) ? result.data : [];
+    const offices = Array.isArray(officesResult.data) ? officesResult.data : [];
+    const home = prices.find(item=>String(item.delivery_type || '').trim().toLowerCase() === 'express');
+    state.homePrice = Number(home?.delivery_price) || null;
+    state.offices = offices
+      .map(office=>({
+        id: String(office.id),
+        label: String(office.name || office.address || `مكتب ${office.id}`),
+        price: Number(office.delivery_price) || 0,
+      }))
+      .filter(office=>office.price > 0);
+
+    officeSelect.innerHTML = '<option value="">اختاري مكتب التوصيل</option>' + state.offices.map(office=>
+      `<option value="${office.id}">${office.label} — ${office.price} دج</option>`
+    ).join('');
+    officeSelect.disabled = state.offices.length === 0;
+    if (state.offices.length === 0){
+      officeSelect.innerHTML = '<option value="">لا يوجد مكتب متاح لهذه البلدية</option>';
+    }
+    updateSummary();
+  }catch(error){
+    console.warn('ZIMOU pricing unavailable', error);
+    officeSelect.innerHTML = '<option value="">تعذر تحميل المكاتب — أعيدي المحاولة</option>';
+    updateSummary();
+  }
+}
 
 /* offers grid (cards) */
 function renderOffersGrid(){
@@ -790,12 +904,27 @@ function renderDeliveryGrid(){
     label.addEventListener('click', ()=>{
       state.deliveryType = label.getAttribute('data-delivery');
       renderDeliveryGrid();
+      renderOfficeField();
       updateSummary();
     });
   });
 }
 
-wilayaSelect.addEventListener('change', ()=>{ state.wilaya = wilayaSelect.value; updateSummary(); });
+wilayaSelect.addEventListener('change', ()=>{
+  state.wilaya = wilayaSelect.value;
+  state.wilayaId = wilayaSelect.selectedOptions[0]?.dataset.zimouId || "";
+  if (state.wilayaId) loadCommunes();
+  updateSummary();
+});
+communeSelect.addEventListener('change', ()=>{
+  state.communeId = communeSelect.selectedOptions[0]?.dataset.communeId || "";
+  if (state.communeId) loadPricing();
+});
+officeSelect.addEventListener('change', ()=>{
+  officeSelect.setCustomValidity('');
+  state.selectedOffice = state.offices.find(office=>office.id === officeSelect.value) || null;
+  updateSummary();
+});
 
 /* summary + totals */
 function getSelectedOffer(){ return OFFERS.find(o=>o.id===state.offerId); }
@@ -821,7 +950,8 @@ function updateWhatsappLinks(){
   const fee = getDeliveryFee(state.wilaya, state.deliveryType);
   const total = offer.price + fee;
   const deliveryLabel = DELIVERY_OPTIONS.find(d=>d.id===state.deliveryType).label;
-  const msg = encodeURIComponent(`طلب CALMORA\nسعر المنتج: ${offer.price} دج\nالتوصيل: ${fee} دج\nالمجموع: ${total} دج\nالولاية: ${state.wilaya || "غير محددة"}\nنوع التوصيل: ${deliveryLabel}`);
+  const officeLine = state.deliveryType === 'office' && state.selectedOffice ? `\nالمكتب: ${state.selectedOffice.label}` : '';
+  const msg = encodeURIComponent(`طلب CALMORA\nسعر المنتج: ${offer.price} دج\nالتوصيل: ${fee} دج\nالمجموع: ${total} دج\nالولاية: ${state.wilaya || "غير محددة"}\nالبلدية: ${communeSelect.value || "غير محددة"}\nنوع التوصيل: ${deliveryLabel}${officeLine}`);
   const url = `https://wa.me/${WHATSAPP.replace('+','')}?text=${msg}`;
   document.getElementById('whatsapp-float').href = url;
   document.getElementById('footer-whatsapp').href = url;
@@ -850,6 +980,12 @@ function setupReveal(){
 /* form submit */
 document.getElementById('order-form').addEventListener('submit', async (e)=>{
   e.preventDefault();
+  if (state.deliveryType === 'office' && !state.selectedOffice){
+    officeSelect.disabled = false;
+    officeSelect.setCustomValidity('اختاري مكتب التوصيل');
+    officeSelect.reportValidity();
+    return;
+  }
   const btn = document.getElementById('submit-btn');
   if (btn.disabled) return;
   btn.disabled = true;
@@ -867,8 +1003,12 @@ document.getElementById('order-form').addEventListener('submit', async (e)=>{
     phone: document.getElementById('f-phone').value,
     wilaya: state.wilaya,
     commune: document.getElementById('f-commune').value,
+    communeId: state.communeId,
+    wilayaId: state.wilayaId,
     qty: offer.qty,
     deliveryType: deliveryLabel,
+    deliveryOffice: state.selectedOffice?.label || "",
+    deliveryOfficeId: state.selectedOffice?.id || "",
     productPrice: offer.price,
     deliveryFee: fee,
     totalAmount: total,
@@ -881,6 +1021,25 @@ document.getElementById('order-form').addEventListener('submit', async (e)=>{
       headers: {'Content-Type':'text/plain;charset=utf-8'},
       body: JSON.stringify(orderData),
     });
+
+    try{
+      const zimouResponse = await fetch(`${ZIMOU_ENDPOINT}/zimou/orders`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          phone: orderData.phone,
+          wilayaId: state.wilayaId,
+          communeId: state.communeId,
+          deliveryType: state.deliveryType,
+          officeId: state.selectedOffice?.id || null,
+          totalAmount: total,
+          freeDelivery: offer.id === '3' && state.deliveryType === 'office',
+        }),
+      });
+      if (!zimouResponse.ok) throw new Error(`ZIMOU order failed: ${zimouResponse.status}`);
+    }catch(zimouError){
+      console.warn('ZIMOU order creation failed; Google Sheets order was kept', zimouError);
+    }
 
     try{
       await trackPurchase(offer.qty, total, {
@@ -921,6 +1080,7 @@ document.getElementById('year').textContent = new Date().getFullYear();
 document.getElementById('year2').textContent = new Date().getFullYear();
 renderOffersGrid();
 renderDeliveryGrid();
+renderOfficeField();
 updateSummary();
 setupReveal();
 createIcons();
