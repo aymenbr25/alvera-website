@@ -237,11 +237,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         </label>
 
         <label class="block">
-          <span class="block text-sm font-semibold mb-1.5">الكمية</span>
-          <select id="f-offer" class="input"></select>
-        </label>
-
-        <label class="block">
           <span class="block text-sm font-semibold mb-1.5">ملاحظات (اختياري)</span>
           <textarea id="f-notes" rows="3" class="input resize-none" placeholder="أي معلومة تودين إضافتها..."></textarea>
         </label>
@@ -442,8 +437,8 @@ const CAPI_ENDPOINT = 'https://calmora-capi.barrahalaymen25.workers.dev/';
 
 function getPackageData(qty){
   let value = 1890;
-  if (qty === 2) value = 3500;
-  if (qty === 3) value = 5000;
+  if (qty === 2) value = 3000;
+  if (qty === 3) value = 4500;
   return { qty, value };
 }
 
@@ -608,8 +603,8 @@ const DELIVERY_FEES = {
 
 const OFFERS = [
   { id:"1", qty:1, label:"علبة واحدة", price:1890, old:2500, tag:null },
-  { id:"2", qty:2, label:"علبتين", price:3500, old:5000, tag:"الأكثر طلباً" },
-  { id:"3", qty:3, label:"3 علب — عرض اقتصادي", price:5000, old:7500, tag:"أفضل قيمة" },
+  { id:"2", qty:2, label:"علبتين", price:3000, old:3500, tag:"الأكثر طلباً" },
+  { id:"3", qty:3, label:"3 علب — عرض اقتصادي", price:4500, old:5000, tag:"توصيل المكتب مجاني" },
 ];
 
 const DELIVERY_OPTIONS = [
@@ -619,7 +614,18 @@ const DELIVERY_OPTIONS = [
 
 let state = { offerId: "1", deliveryType: "office", wilaya: "" };
 
-function getDeliveryFee(wilaya, deliveryType){ return (DELIVERY_FEES[wilaya] || {})[deliveryType] ?? 0; }
+function getDeliveryFee(wilaya, deliveryType){
+  const fees = DELIVERY_FEES[wilaya] || {};
+  if (state.offerId === "3"){
+    if (deliveryType === "office") return 0;
+    if (deliveryType === "home"){
+      const homeFee = fees.home ?? 0;
+      const officeFee = fees.office ?? 0;
+      return Math.max(homeFee - officeFee, 0);
+    }
+  }
+  return fees[deliveryType] ?? 0;
+}
 
 /* ============================================================
    RENDER STATIC BLOCKS
@@ -690,14 +696,14 @@ document.getElementById('ugc-grid').innerHTML = [
   </div>`).join('');
 
 document.getElementById('trust-grid').innerHTML = [
-  ["truck","دفع عند الاستلام"],["map-pin","توصيل 58 ولاية"],["package-check","تغليف آمن"],["phone","دعم جزائري"],["shield-check","تأكيد بالهاتف"]
+  ["truck","دفع عند الاستلام"],["map-pin","توصيل 58 ولاية"],["package-check","تغليف آمن"],["phone","دعم 24H"]
 ].map(([i,t])=>`<div class="flex flex-col items-center gap-2">
     <div class="w-11 h-11 rounded-full bg-blush/60 flex items-center justify-center">${iconHtml(i,"w-5 h-5 text-primary")}</div>
     <span class="text-xs font-semibold">${t}</span>
   </div>`).join('');
 
 document.getElementById('form-trust-grid').innerHTML = [
-  ["truck","دفع عند الاستلام"],["shield-check","طلب آمن"],["phone","تأكيد بالهاتف"]
+  ["truck","دفع عند الاستلام"],["shield-check","طلب آمن"]
 ].map(([i,t])=>`<div class="flex flex-col items-center text-center gap-1 text-[11px] font-medium text-muted-foreground">${iconHtml(i,"w-4 h-4 text-primary")}<span>${t}</span></div>`).join('');
 
 document.getElementById('faq-list').innerHTML = [
@@ -729,7 +735,7 @@ document.getElementById('nextsteps-grid').innerHTML = [
   </div>`).join('');
 
 document.getElementById('thankyou-trust-grid').innerHTML = [
-  ["truck","دفع عند الاستلام"],["package-check","تغليف آمن"],["phone","دعم جزائري"],["shield-check","طلب مؤكد"]
+  ["truck","دفع عند الاستلام"],["package-check","تغليف آمن"],["phone","دعم 24H"],["shield-check","طلب مؤكد"]
 ].map(([i,t])=>`<div class="flex flex-col items-center gap-2">
     <div class="w-11 h-11 rounded-full bg-blush/60 flex items-center justify-center">${iconHtml(i,"w-5 h-5 text-primary")}</div>
     <span class="text-xs font-semibold">${t}</span>
@@ -741,14 +747,6 @@ WILAYAS.forEach(w=>{
   const opt = document.createElement('option');
   opt.value = w; opt.textContent = w;
   wilayaSelect.appendChild(opt);
-});
-
-/* offer select (dropdown mirror) */
-const fOffer = document.getElementById('f-offer');
-OFFERS.forEach(o=>{
-  const opt = document.createElement('option');
-  opt.value = o.id; opt.textContent = `${o.label} — ${o.price} دج`;
-  fOffer.appendChild(opt);
 });
 
 /* offers grid (cards) */
@@ -773,7 +771,6 @@ function renderOffersGrid(){
   document.querySelectorAll('.offer-card').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       state.offerId = btn.getAttribute('data-offer');
-      fOffer.value = state.offerId;
       renderOffersGrid();
       updateSummary();
     });
@@ -798,7 +795,6 @@ function renderDeliveryGrid(){
   });
 }
 
-fOffer.addEventListener('change', ()=>{ state.offerId = fOffer.value; renderOffersGrid(); updateSummary(); });
 wilayaSelect.addEventListener('change', ()=>{ state.wilaya = wilayaSelect.value; updateSummary(); });
 
 /* summary + totals */
@@ -808,7 +804,12 @@ function updateSummary(){
   const fee = getDeliveryFee(state.wilaya, state.deliveryType);
   const total = offer.price + fee;
   document.getElementById('sum-price').textContent = `${offer.price} دج`;
-  document.getElementById('sum-delivery').textContent = `${fee} دج`;
+  const deliverySummary = offer.id === "3"
+    ? state.deliveryType === "office"
+      ? "مجاني 🎁"
+      : `إضافة التوصيل للمنزل: ${fee} دج`
+    : `${fee} دج`;
+  document.getElementById('sum-delivery').textContent = deliverySummary;
   document.getElementById('sum-total').textContent = `${total} دج`;
   document.getElementById('submit-label').textContent = `أكدي طلبي الآن — ${total} دج`;
   document.getElementById('mobile-cta-label').textContent = `اطلبي CALMORA - ${total} دج`;
