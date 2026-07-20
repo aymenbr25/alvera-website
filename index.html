@@ -238,7 +238,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           <div class="grid grid-cols-2 gap-2" id="delivery-type-grid"></div>
         </label>
 
-        <label class="block" id="office-field" hidden>
+        <label class="hidden" id="office-field">
           <span class="block text-sm font-semibold mb-1.5">مكتب التوصيل <span class="text-primary">*</span></span>
           <select id="f-office" class="input" disabled>
             <option value="">اختاري البلدية أولاً</option>
@@ -793,7 +793,8 @@ function resetZimouPricing(){
 
 function renderOfficeField(){
   const visible = state.deliveryType === "office";
-  officeField.hidden = !visible;
+  officeField.classList.toggle('hidden', !visible);
+  officeField.classList.toggle('block', visible);
   officeSelect.required = visible;
 }
 
@@ -839,13 +840,29 @@ async function loadPricing(){
     const prices = Array.isArray(result.data) ? result.data : [];
     const offices = Array.isArray(officesResult.data) ? officesResult.data : [];
     const home = prices.find(item=>String(item.delivery_type || '').trim().toLowerCase() === 'express');
+    const normalizeOfficeText = value=>String(value || '')
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, ' ');
+    const relayPrices = prices
+      .filter(item=>String(item.delivery_type || '').toLowerCase().startsWith('point relai'))
+      .map(item=>({
+        text: normalizeOfficeText(item.delivery_type),
+        price: Number(item.delivery_price) || 0,
+      }));
     state.homePrice = Number(home?.delivery_price) || null;
     state.offices = offices
-      .map(office=>({
-        id: String(office.id),
-        label: String(office.name || office.address || `مكتب ${office.id}`),
-        price: Number(office.delivery_price) || 0,
-      }))
+      .map(office=>{
+        const address = normalizeOfficeText(office.address);
+        const matchingPrice = relayPrices.find(item=>address && item.text.includes(address));
+        const company = String(office.partner_company_name || office.name || '').trim();
+        const officeAddress = String(office.address || office.name || `مكتب ${office.id}`).trim();
+        return {
+          id: String(office.id),
+          label: company && company !== officeAddress ? `${company} — ${officeAddress}` : officeAddress,
+          price: Number(office.delivery_price) || matchingPrice?.price || 0,
+        };
+      })
       .filter(office=>office.price > 0);
 
     officeSelect.innerHTML = '<option value="">اختاري مكتب التوصيل</option>' + state.offices.map(office=>
