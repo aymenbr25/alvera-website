@@ -1044,6 +1044,7 @@ document.getElementById('order-form').addEventListener('submit', async (e)=>{
         method: 'POST',
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify({
+          clientOrderId: orderId,
           phone: orderData.phone,
           wilayaId: state.wilayaId,
           communeId: state.communeId,
