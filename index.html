@@ -647,10 +647,10 @@ function getDeliveryFee(wilaya, deliveryType){
     if (deliveryType === "office") return 0;
     if (deliveryType === "home"){
       const homeFee = fees.home ?? 0;
-      return Math.max(homeFee - includedOfficeFee, 0);
+      return Math.max(homeFee - includedOfficeFee - 150, 0);
     }
   }
-  return fees[deliveryType] ?? 0;
+  return Math.max((fees[deliveryType] ?? 0) - 150, 0);
 }
 
 /* ============================================================
@@ -866,7 +866,7 @@ async function loadPricing(){
       .filter(office=>office.price > 0);
 
     officeSelect.innerHTML = '<option value="">اختاري مكتب التوصيل</option>' + state.offices.map(office=>
-      `<option value="${office.id}">${office.label} — ${office.price} دج</option>`
+      `<option value="${office.id}">${office.label} — ${Math.max(office.price - 150, 0)} دج</option>`
     ).join('');
     officeSelect.disabled = state.offices.length === 0;
     if (state.offices.length === 0){
