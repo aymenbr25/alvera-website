@@ -70,6 +70,19 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   .input:focus { outline:none; border-color: oklch(0.72 0.11 15); box-shadow: 0 0 0 4px oklch(0.72 0.11 15 / 0.12); }
   select.input { appearance:none; background-image: linear-gradient(45deg, transparent 50%, oklch(0.72 0.11 15) 50%), linear-gradient(135deg, oklch(0.72 0.11 15) 50%, transparent 50%); background-position: calc(1rem) center, calc(1rem + 5px) center; background-size: 5px 5px, 5px 5px; background-repeat:no-repeat; padding-left:2rem; }
   .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0.75rem); }
+  .form-step { animation: step-in .22s ease-out both; }
+  @keyframes step-in { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+  @media (max-width: 640px) {
+    #order { padding-top:.75rem; padding-bottom:.75rem; }
+    #order-heading { margin-bottom:.55rem; }
+    #order-heading h2 { margin-top:.1rem; font-size:1.55rem; line-height:1.15; }
+    #order-heading p { margin-top:.1rem; font-size:.72rem; }
+    #order-form { padding:.8rem; border-radius:1.25rem; }
+    #step-1 { gap:.48rem; }
+    #step-1 .input { padding:.58rem .75rem; font-size:.83rem; border-radius:.7rem; }
+    #step-1 label > span { margin-bottom:.2rem; font-size:.76rem; }
+    #offers-grid { margin-bottom:0; gap:.35rem; }
+  }
 </style>
 </head>
 <body class="min-h-screen bg-background text-foreground overflow-x-hidden">
@@ -85,10 +98,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <div id="main-page">
 
   <!-- NAV -->
-  <header class="sticky top-0 z-40 backdrop-blur-md bg-background/80 border-b border-border/60">
+  <header class="relative z-40 bg-background/95 border-b border-border/60">
     <div class="mx-auto max-w-6xl px-4 h-14 flex items-center justify-between">
       <div class="font-display text-2xl tracking-widest text-primary font-semibold">CALMORA</div>
-      <button onclick="scrollToOrder()" class="rounded-full bg-primary text-primary-foreground text-xs font-bold px-4 py-2 shadow-soft hover:opacity-90 transition">اطلبي الآن</button>
+      <button onclick="scrollToOrder()" class="rounded-full bg-primary text-primary-foreground text-xs font-bold px-4 py-2 shadow-soft hover:opacity-90 transition">احسبي التكلفة</button>
     </div>
   </header>
 
@@ -198,28 +211,26 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </section>
 
   <!-- OFFER + ORDER -->
-  <section id="order" class="px-5 py-16 md:py-20 gradient-hero">
+  <section id="order" class="px-4 py-16 md:py-20 gradient-hero">
     <div class="mx-auto max-w-3xl">
-      <div class="text-center mb-8" data-reveal>
-        <span class="text-xs uppercase tracking-[0.3em] text-primary font-semibold">Order</span>
-        <h2 class="mt-3 font-display text-3xl md:text-4xl">اختاري عرضك</h2>
+      <div id="order-heading" class="text-center mb-8" data-reveal>
+        <h2 class="font-display text-3xl md:text-4xl">احسبي التكلفة</h2>
         <p class="mt-2 text-sm text-muted-foreground">الدفع عند الاستلام · تأكيد عبر الهاتف</p>
       </div>
 
-      <!-- OFFERS -->
-      <div class="grid sm:grid-cols-3 gap-3 mb-8" id="offers-grid"></div>
-
       <!-- FORM -->
-      <form id="order-form" class="bg-card rounded-3xl p-6 md:p-8 shadow-card border border-border/50 space-y-4" data-reveal>
-        <div class="grid sm:grid-cols-2 gap-4">
-          <label class="block">
-            <span class="block text-sm font-semibold mb-1.5">الاسم الكامل <span class="text-primary">*</span></span>
-            <input required id="f-name" class="input" placeholder="مثال: أميرة بن علي">
-          </label>
-          <label class="block">
-            <span class="block text-sm font-semibold mb-1.5">رقم الهاتف <span class="text-primary">*</span></span>
-            <input required type="tel" inputmode="tel" id="f-phone" class="input" placeholder="05XXXXXXXX">
-          </label>
+      <form id="order-form" class="bg-card rounded-3xl p-6 md:p-8 shadow-card border border-border/50" data-reveal>
+        <div class="mb-2.5 flex items-center justify-between text-xs font-bold text-primary">
+          <span id="progress-label">الخطوة 1 من 2</span>
+          <span class="flex gap-1" aria-hidden="true"><span id="progress-dot-1" class="w-7 h-1.5 rounded-full bg-primary"></span><span id="progress-dot-2" class="w-7 h-1.5 rounded-full bg-blush"></span></span>
+        </div>
+
+        <div id="step-1" class="form-step flex flex-col">
+          <div>
+            <span class="block text-sm font-semibold mb-1.5">اختاري العرض <span class="text-primary">*</span></span>
+            <div class="grid grid-cols-3" id="offers-grid"></div>
+          </div>
+          <div class="grid sm:grid-cols-2 gap-2">
           <label class="block">
             <span class="block text-sm font-semibold mb-1.5">الولاية <span class="text-primary">*</span></span>
             <select required id="f-wilaya" class="input">
@@ -232,47 +243,47 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
               <option value="">اختاري الولاية أولاً</option>
             </select>
           </label>
+          </div>
+
+          <label class="block">
+            <span class="block text-sm font-semibold mb-1.5">نوع التوصيل <span class="text-primary">*</span></span>
+            <div class="grid grid-cols-2 gap-2" id="delivery-type-grid"></div>
+          </label>
+
+          <label class="hidden" id="office-field">
+            <span class="block text-sm font-semibold mb-1.5">مكتب التوصيل <span class="text-primary">*</span></span>
+            <select id="f-office" class="input" disabled>
+              <option value="">اختاري البلدية أولاً</option>
+            </select>
+          </label>
+
+          <div class="bg-blush/40 border border-rose-gold-soft/60 rounded-xl px-3 py-2">
+            <div class="grid grid-cols-3 text-center text-[11px]">
+              <div><span class="block text-muted-foreground">المنتج</span><strong id="sum-price">1890 دج</strong></div>
+              <div class="border-x border-rose-gold-soft/60"><span class="block text-muted-foreground">التوصيل</span><strong id="sum-delivery">0 دج</strong></div>
+              <div><span class="block text-muted-foreground">المجموع</span><strong class="text-primary text-base" id="sum-total">1890 دج</strong></div>
+            </div>
+          </div>
+
+          <button type="button" id="next-step-btn" class="w-full rounded-full bg-primary text-primary-foreground font-bold py-3 shadow-soft hover:opacity-95 active:scale-[0.99] transition">تسجيل الطلب</button>
         </div>
 
-        <label class="block">
-          <span class="block text-sm font-semibold mb-1.5">نوع التوصيل <span class="text-primary">*</span></span>
-          <div class="grid grid-cols-2 gap-2" id="delivery-type-grid"></div>
-        </label>
-
-        <label class="hidden" id="office-field">
-          <span class="block text-sm font-semibold mb-1.5">مكتب التوصيل <span class="text-primary">*</span></span>
-          <select id="f-office" class="input" disabled>
-            <option value="">اختاري البلدية أولاً</option>
-          </select>
-        </label>
-
-        <label class="block">
-          <span class="block text-sm font-semibold mb-1.5">ملاحظات (اختياري)</span>
-          <textarea id="f-notes" rows="3" class="input resize-none" placeholder="أي معلومة تودين إضافتها..."></textarea>
-        </label>
-
-        <!-- Summary -->
-        <div class="space-y-2 bg-blush/40 border border-rose-gold-soft/60 rounded-2xl px-4 py-3">
-          <div class="flex items-center justify-between text-sm">
-            <span class="font-medium">سعر المنتج</span>
-            <span class="font-bold" id="sum-price">1890 دج</span>
+        <div id="step-2" class="form-step hidden space-y-3">
+          <div class="grid sm:grid-cols-2 gap-3">
+            <label class="block"><span class="block text-sm font-semibold mb-1.5">الاسم الكامل <span class="text-primary">*</span></span><input required id="f-name" class="input" placeholder="مثال: أميرة بن علي"></label>
+            <label class="block"><span class="block text-sm font-semibold mb-1.5">رقم الهاتف الأول <span class="text-primary">*</span></span><input required type="tel" inputmode="tel" id="f-phone" class="input" placeholder="05XXXXXXXX"></label>
+            <label class="block"><span class="block text-sm font-semibold mb-1.5">رقم الهاتف الثاني (اختياري)</span><input type="tel" inputmode="tel" id="f-phone-2" class="input" placeholder="05XXXXXXXX"></label>
+            <label class="block"><span class="block text-sm font-semibold mb-1.5">ملاحظات (اختياري)</span><textarea id="f-notes" rows="2" class="input resize-none" placeholder="أي معلومة تودين إضافتها..."></textarea></label>
           </div>
-          <div class="flex items-center justify-between text-sm">
-            <span class="font-medium">التوصيل</span>
-            <span class="font-bold" id="sum-delivery">0 دج</span>
+          <div class="flex items-center justify-between bg-blush/40 border border-rose-gold-soft/60 rounded-xl px-4 py-3 text-sm">
+            <span id="step2-offer">علبة واحدة</span><strong class="text-primary" id="step2-total">1890 دج</strong>
           </div>
-          <div class="flex items-center justify-between border-t border-rose-gold-soft/60 pt-2">
-            <span class="text-sm font-medium">المجموع</span>
-            <span class="font-display text-2xl font-bold text-primary" id="sum-total">1890 دج</span>
+          <div class="grid grid-cols-[auto_1fr] gap-2">
+            <button type="button" id="back-step-btn" class="rounded-full border border-primary/30 text-primary font-bold px-5 py-3">رجوع</button>
+            <button type="submit" id="submit-btn" class="rounded-full bg-primary text-primary-foreground font-bold py-3 shadow-soft disabled:cursor-not-allowed disabled:opacity-70"><span id="submit-label">تأكيد الطلب — 1890 دج</span></button>
           </div>
+          <div class="grid grid-cols-2 gap-2 pt-1" id="form-trust-grid"></div>
         </div>
-
-        <button type="submit" id="submit-btn" class="w-full rounded-full bg-primary text-primary-foreground font-bold text-lg py-4 shadow-soft hover:opacity-95 active:scale-[0.99] transition flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-70">
-          <i data-lucide="shopping-bag" class="w-5 h-5"></i>
-          <span id="submit-label">أكدي طلبي الآن — 1890 دج</span>
-        </button>
-
-        <div class="grid grid-cols-3 gap-2 pt-2" id="form-trust-grid"></div>
       </form>
     </div>
   </section>
@@ -328,24 +339,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
   </footer>
 
-  <!-- WHATSAPP FLOATING -->
-  <a id="whatsapp-float" href="#" target="_blank" rel="noopener noreferrer" aria-label="تواصلي معنا عبر واتساب" class="fixed bottom-20 md:bottom-6 right-4 z-50 bg-[#25D366] text-white rounded-full shadow-soft flex items-center gap-2 px-4 py-3 font-semibold hover:scale-105 transition">
-    <i data-lucide="message-circle" class="w-5 h-5"></i>
-    <span class="text-sm">تواصلي معنا</span>
-  </a>
-
-  <!-- STICKY MOBILE CTA -->
-  <div class="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-border p-3 pb-safe">
-    <button onclick="scrollToOrder()" class="w-full rounded-full bg-primary text-primary-foreground font-bold py-3.5 shadow-soft flex items-center justify-center gap-2">
-      <i data-lucide="shopping-bag" class="w-5 h-5"></i>
-      <span id="mobile-cta-label">اطلبي CALMORA - 1890 دج</span>
-    </button>
-  </div>
 </div>
 
 <!-- THANK YOU PAGE (shown after successful order) -->
 <div id="thank-you-page" class="hidden min-h-screen bg-background text-foreground overflow-x-hidden">
-  <header class="sticky top-0 z-40 backdrop-blur-md bg-background/80 border-b border-border/60">
+  <header class="relative z-40 bg-background/95 border-b border-border/60">
     <div class="mx-auto max-w-6xl px-4 h-14 flex items-center justify-between">
       <a href="#" onclick="showMainPage(); return false;" class="font-display text-2xl tracking-widest text-primary font-semibold">CALMORA</a>
       <a href="#" onclick="showMainPage(); return false;" class="rounded-full border border-primary/30 text-primary text-xs font-bold px-4 py-2 hover:bg-primary/5 transition inline-flex items-center gap-1.5">
@@ -619,13 +617,13 @@ const OFFERS = [
 ];
 
 const DELIVERY_OPTIONS = [
-  { id:"office", label:"للمكتب", formValue:"للمكتب" },
   { id:"home", label:"للمنزل", formValue:"للمنزل" },
+  { id:"office", label:"للمكتب", formValue:"للمكتب" },
 ];
 
 let state = {
   offerId: "1",
-  deliveryType: "office",
+  deliveryType: "home",
   wilaya: "",
   wilayaId: "",
   communeId: "",
@@ -879,22 +877,13 @@ async function loadPricing(){
   }
 }
 
-/* offers grid (cards) */
+/* compact offer selector */
 function renderOffersGrid(){
   document.getElementById('offers-grid').innerHTML = OFFERS.map(o=>{
     const active = o.id === state.offerId;
-    return `<button type="button" data-offer="${o.id}" class="offer-card relative text-right rounded-2xl border-2 p-4 transition ${active ? 'border-primary bg-white shadow-soft' : 'border-border bg-white/60 hover:border-primary/40'}">
-      ${o.tag ? `<span class="absolute -top-2.5 right-3 text-[10px] font-bold bg-primary text-primary-foreground px-2.5 py-1 rounded-full">${o.tag}</span>` : ''}
-      <div class="flex items-center justify-between mb-1">
-        <span class="w-5 h-5 rounded-full border-2 flex items-center justify-center ${active ? 'border-primary bg-primary' : 'border-border'}">
-          ${active ? iconHtml('check','w-3 h-3 text-primary-foreground') : ''}
-        </span>
-        <span class="font-bold">${o.label}</span>
-      </div>
-      <div class="flex items-baseline gap-2 justify-start">
-        <span class="font-display text-2xl text-primary font-bold">${o.price} دج</span>
-        <span class="text-xs text-muted-foreground line-through">${o.old} دج</span>
-      </div>
+    return `<button type="button" data-offer="${o.id}" class="offer-card min-w-0 rounded-xl border px-1.5 py-2 text-center transition ${active ? 'border-primary bg-blush/60 text-primary' : 'border-border bg-white/60'}">
+      <span class="block truncate text-[11px] font-bold">${o.qty === 1 ? 'علبة' : o.qty === 2 ? 'علبتان' : '3 علب'}</span>
+      <span class="block text-xs font-extrabold">${o.price} دج</span>
     </button>`;
   }).join('');
   createIcons();
@@ -911,7 +900,7 @@ function renderOffersGrid(){
 function renderDeliveryGrid(){
   document.getElementById('delivery-type-grid').innerHTML = DELIVERY_OPTIONS.map(opt=>{
     const active = state.deliveryType === opt.id;
-    return `<label data-delivery="${opt.id}" class="delivery-option cursor-pointer rounded-2xl border px-4 py-3 text-center text-sm font-bold transition ${active ? 'border-primary bg-blush/60 text-primary' : 'border-border bg-white/60 text-foreground'}">
+    return `<label data-delivery="${opt.id}" class="delivery-option cursor-pointer rounded-xl border px-3 py-2 text-center text-sm font-bold transition ${active ? 'border-primary bg-blush/60 text-primary' : 'border-border bg-white/60 text-foreground'}">
       <input type="radio" name="deliveryType" value="${opt.id}" class="sr-only" ${active ? 'checked' : ''}>
       ${opt.label}
     </label>`;
@@ -956,8 +945,9 @@ function updateSummary(){
     : `${fee} دج`;
   document.getElementById('sum-delivery').textContent = deliverySummary;
   document.getElementById('sum-total').textContent = `${total} دج`;
-  document.getElementById('submit-label').textContent = `أكدي طلبي الآن — ${total} دج`;
-  document.getElementById('mobile-cta-label').textContent = `اطلبي CALMORA - ${total} دج`;
+  document.getElementById('submit-label').textContent = `تأكيد الطلب — ${total} دج`;
+  document.getElementById('step2-offer').textContent = offer.label;
+  document.getElementById('step2-total').textContent = `${total} دج`;
   updateWhatsappLinks();
 }
 
@@ -969,14 +959,12 @@ function updateWhatsappLinks(){
   const officeLine = state.deliveryType === 'office' && state.selectedOffice ? `\nالمكتب: ${state.selectedOffice.label}` : '';
   const msg = encodeURIComponent(`طلب CALMORA\nسعر المنتج: ${offer.price} دج\nالتوصيل: ${fee} دج\nالمجموع: ${total} دج\nالولاية: ${state.wilaya || "غير محددة"}\nالبلدية: ${communeSelect.value || "غير محددة"}\nنوع التوصيل: ${deliveryLabel}${officeLine}`);
   const url = `https://wa.me/${WHATSAPP.replace('+','')}?text=${msg}`;
-  document.getElementById('whatsapp-float').href = url;
   document.getElementById('footer-whatsapp').href = url;
   document.getElementById('thankyou-whatsapp').href = `https://wa.me/${WHATSAPP.replace('+','')}`;
 }
 
 /* scroll + reveal */
 function scrollToOrder(){
-  trackInitiateCheckout(getSelectedOffer().qty, getSelectedOffer().price + getDeliveryFee(state.wilaya, state.deliveryType));
   document.getElementById('order').scrollIntoView({behavior:'smooth'});
 }
 
@@ -993,7 +981,32 @@ function setupReveal(){
   els.forEach(el=>io.observe(el));
 }
 
-/* form submit */
+function showFormStep(step){
+  const isFirst = step === 1;
+  document.getElementById('step-1').classList.toggle('hidden', !isFirst);
+  document.getElementById('step-2').classList.toggle('hidden', isFirst);
+  document.getElementById('progress-label').textContent = `الخطوة ${step} من 2`;
+  document.getElementById('progress-dot-1').className = `w-7 h-1.5 rounded-full ${isFirst ? 'bg-primary' : 'bg-blush'}`;
+  document.getElementById('progress-dot-2').className = `w-7 h-1.5 rounded-full ${isFirst ? 'bg-blush' : 'bg-primary'}`;
+  document.querySelector('#order-heading h2').textContent = isFirst ? 'احسبي التكلفة' : 'معلوماتك الشخصية';
+}
+
+document.getElementById('next-step-btn').addEventListener('click', ()=>{
+  if (!wilayaSelect.reportValidity() || !communeSelect.reportValidity()) return;
+  if (state.deliveryType === 'office' && !state.selectedOffice){
+    officeSelect.disabled = false;
+    officeSelect.setCustomValidity('اختاري مكتب التوصيل');
+    officeSelect.reportValidity();
+    return;
+  }
+  const offer = getSelectedOffer();
+  trackInitiateCheckout(offer.qty, offer.price + getDeliveryFee(state.wilaya, state.deliveryType));
+  showFormStep(2);
+});
+
+document.getElementById('back-step-btn').addEventListener('click', ()=>showFormStep(1));
+
+/* final form submit */
 document.getElementById('order-form').addEventListener('submit', async (e)=>{
   e.preventDefault();
   if (state.deliveryType === 'office' && !state.selectedOffice){
@@ -1017,6 +1030,7 @@ document.getElementById('order-form').addEventListener('submit', async (e)=>{
     orderId,
     name: document.getElementById('f-name').value,
     phone: document.getElementById('f-phone').value,
+    phone2: document.getElementById('f-phone-2').value,
     wilaya: state.wilaya,
     commune: document.getElementById('f-commune').value,
     communeId: state.communeId,
