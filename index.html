@@ -98,10 +98,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <div id="main-page">
 
   <!-- NAV -->
-  <header class="relative z-40 bg-background/95 border-b border-border/60">
+  <header class="sticky top-0 z-40 backdrop-blur-md bg-background/80 border-b border-border/60">
     <div class="mx-auto max-w-6xl px-4 h-14 flex items-center justify-between">
       <div class="font-display text-2xl tracking-widest text-primary font-semibold">CALMORA</div>
-      <button onclick="scrollToOrder()" class="rounded-full bg-primary text-primary-foreground text-xs font-bold px-4 py-2 shadow-soft hover:opacity-90 transition">احسبي التكلفة</button>
+      <button onclick="scrollToOrder()" class="rounded-full bg-primary text-primary-foreground text-xs font-bold px-4 py-2 shadow-soft hover:opacity-90 transition">اطلبي الآن</button>
     </div>
   </header>
 
@@ -338,6 +338,14 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       © <span id="year"></span> CALMORA · جميع الحقوق محفوظة
     </div>
   </footer>
+
+  <!-- STICKY MOBILE DELIVERY CTA -->
+  <div class="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-border p-3 pb-safe">
+    <button onclick="scrollToOrder()" class="w-full rounded-full bg-primary text-primary-foreground font-bold py-3.5 shadow-soft flex items-center justify-center gap-2">
+      <i data-lucide="truck" class="w-5 h-5"></i>
+      <span>تكاليف التوصيل</span>
+    </button>
+  </div>
 
 </div>
 
